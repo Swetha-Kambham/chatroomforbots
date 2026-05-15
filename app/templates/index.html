@@ -1,0 +1,324 @@
+{% extends "base.html" %}
+
+{% block sidebar %}
+<aside class="w-72 bg-white border-r border-gray-200 flex flex-col overflow-hidden flex-shrink-0">
+
+  <!-- Conversations -->
+  <div class="px-4 pt-4 pb-2">
+    <div class="flex items-center justify-between mb-2">
+      <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Conversations</span>
+      <button onclick="document.getElementById('new-conv-form').classList.toggle('hidden')"
+              class="text-primary hover:text-primary-dark text-xl font-bold leading-none" title="New conversation">+</button>
+    </div>
+
+    <form id="new-conv-form" action="/conversations" method="POST"
+          class="hidden mb-2 flex gap-1">
+      <input name="name" placeholder="Chat name…"
+             class="flex-1 text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:border-primary" />
+      <button class="bg-primary text-white text-sm px-3 rounded hover:bg-primary-dark">Go</button>
+    </form>
+
+    <nav class="space-y-1 max-h-40 overflow-y-auto">
+      {% for conv in conversations %}
+      <div class="flex items-center group rounded {% if conv.id == active_conv.id %}bg-primary-light border border-primary{% else %}hover:bg-gray-50 border border-transparent{% endif %}">
+        <a href="/?conv_id={{ conv.id }}"
+           class="flex-1 px-3 py-2 text-sm truncate {% if conv.id == active_conv.id %}text-primary font-medium{% else %}text-gray-700{% endif %}">
+          {{ conv.name }}
+        </a>
+        {% if conv.id != active_conv.id or conversations|length > 1 %}
+        <button hx-delete="/conversations/{{ conv.id }}"
+                hx-confirm="Delete '{{ conv.name }}'?"
+                hx-on::after-request="window.location='{% if conv.id == active_conv.id %}/?{% else %}/?conv_id={{ active_conv.id }}{% endif %}'"
+                class="hidden group-hover:block mr-2 text-gray-400 hover:text-red-500 text-xs">✕</button>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </nav>
+  </div>
+
+  <hr class="border-gray-100 mx-4" />
+
+  <!-- Bots in this conversation -->
+  <div class="px-4 py-3 flex-1 overflow-y-auto">
+    <div class="flex items-center justify-between mb-2">
+      <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Bots in Chat</span>
+    </div>
+
+    <div class="space-y-1 mb-3">
+      {% for bot in all_bots %}
+        {% if bot.id in conv_bot_ids %}
+        <div class="flex items-center justify-between bg-primary-light rounded px-2 py-1.5 group">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="w-2 h-2 rounded-full bg-primary flex-shrink-0"></span>
+            <span class="text-sm font-medium text-primary truncate">{{ bot.name }}</span>
+            <span class="text-xs text-gray-400 truncate hidden group-hover:inline">{{ bot.role }}</span>
+          </div>
+          <div class="flex items-center gap-1 flex-shrink-0">
+            <button onclick='openEditModal({{ bot.id }}, {{ bot.name|tojson }}, {{ bot.role|tojson }}, {{ bot.system_prompt|tojson }}, {{ bot.model_name|tojson }}, {{ bot.is_default|lower }}, false)'
+                    class="text-gray-400 hover:text-primary text-xs px-1" title="Change model">⚙</button>
+            <button hx-delete="/conversations/{{ active_conv.id }}/bots/{{ bot.id }}"
+                    hx-on::after-request="window.location.href='/?conv_id={{ active_conv.id }}'"
+                    class="text-gray-300 hover:text-red-400 text-xs px-1" title="Remove from chat">✕</button>
+          </div>
+        </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+
+    <!-- Add bot to conversation -->
+    {% set not_in_conv = [] %}
+    {% for bot in all_bots %}{% if bot.id not in conv_bot_ids %}{% set _ = not_in_conv.append(bot) %}{% endif %}{% endfor %}
+    {% if not_in_conv %}
+    <form action="/conversations/{{ active_conv.id }}/bots" method="POST" class="flex gap-1 mt-1">
+      <select name="bot_id" class="flex-1 text-xs border border-gray-200 rounded px-2 py-1 focus:outline-none focus:border-primary">
+        {% for bot in not_in_conv %}
+        <option value="{{ bot.id }}">{{ bot.name }}</option>
+        {% endfor %}
+      </select>
+      <button class="bg-primary text-white text-xs px-2 rounded hover:bg-primary-dark">+ Add to chat</button>
+    </form>
+    {% else %}
+    <p class="text-xs text-gray-400 mt-1">All bots are in this chat</p>
+    {% endif %}
+  </div>
+
+  <hr class="border-gray-100 mx-4" />
+
+  <!-- All bots management -->
+  <div class="px-4 py-3 overflow-y-auto max-h-56">
+    <div class="flex items-center justify-between mb-2">
+      <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">All Bots</span>
+      <button onclick="document.getElementById('create-bot-panel').classList.toggle('hidden')"
+              class="text-primary hover:text-primary-dark text-xl font-bold leading-none" title="Create bot">+</button>
+    </div>
+
+    <!-- Create bot form -->
+    <div id="create-bot-panel" class="hidden mb-3 bg-gray-50 rounded p-3 space-y-2 border border-gray-200">
+      <form action="/bots" method="POST" class="space-y-2">
+        <input type="hidden" name="conv_id" value="{{ active_conv.id }}" />
+        <input name="name" placeholder="Bot name" required
+               class="w-full text-xs border border-gray-300 rounded px-2 py-1.5 focus:outline-none focus:border-primary" />
+        <input name="role" placeholder="Role (e.g. Legal Assistant)"
+               class="w-full text-xs border border-gray-300 rounded px-2 py-1.5 focus:outline-none focus:border-primary" />
+        <textarea name="system_prompt" placeholder="System prompt…" rows="3" required
+                  class="w-full text-xs border border-gray-300 rounded px-2 py-1.5 focus:outline-none focus:border-primary resize-none"></textarea>
+        <select name="model_name" id="create-model-select"
+                class="w-full text-xs border border-gray-300 rounded px-2 py-1.5 focus:outline-none focus:border-primary">
+          <option value="tinyllama">tinyllama</option>
+        </select>
+        <button class="w-full bg-primary text-white text-xs py-1.5 rounded hover:bg-primary-dark">Create Bot</button>
+      </form>
+    </div>
+
+    <div class="space-y-1">
+      {% for bot in all_bots %}
+      <div class="flex items-center justify-between hover:bg-gray-50 rounded px-2 py-1.5 group">
+        <div class="min-w-0">
+          <span class="text-sm text-gray-700 truncate block">{{ bot.name }}</span>
+          <span class="text-xs text-gray-400">{{ bot.role }}</span>
+        </div>
+        <div class="flex gap-1 flex-shrink-0">
+          <button onclick='openEditModal({{ bot.id }}, {{ bot.name|tojson }}, {{ bot.role|tojson }}, {{ bot.system_prompt|tojson }}, {{ bot.model_name|tojson }}, {{ bot.is_default|lower }}, true)'
+                  class="text-gray-400 hover:text-primary text-xs px-1">✎</button>
+          {% if not bot.is_default %}
+          <form action="/bots/{{ bot.id }}/delete" method="POST" class="inline">
+            <input type="hidden" name="conv_id" value="{{ active_conv.id }}" />
+            <button class="text-gray-300 hover:text-red-400 text-xs px-1"
+                    onclick="return confirm('Delete ' + {{ bot.name|tojson }} + '?')">✕</button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+</aside>
+
+<!-- Edit bot modal (hidden) -->
+<div id="edit-modal" class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
+  <div class="bg-white rounded-lg shadow-xl w-96 p-5">
+    <h2 id="edit-modal-title" class="text-base font-semibold mb-3 text-gray-800">Edit Bot</h2>
+    <form id="edit-bot-form" method="POST" class="space-y-2">
+      <input type="hidden" name="conv_id" value="{{ active_conv.id }}" />
+      <div id="edit-name-wrapper">
+        <input id="edit-name" name="name" placeholder="Name"
+               class="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-primary" />
+      </div>
+      <div id="edit-role-wrapper">
+        <input id="edit-role" name="role" placeholder="Role"
+               class="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-primary" />
+      </div>
+      <div id="edit-prompt-wrapper">
+        <label class="text-xs text-gray-400 block mb-1">System prompt</label>
+        <textarea id="edit-prompt" name="system_prompt" rows="5" placeholder="System prompt"
+                  class="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-primary resize-none"></textarea>
+      </div>
+      <select id="edit-model" name="model_name"
+              class="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-primary">
+        <option value="tinyllama">tinyllama</option>
+      </select>
+      <div class="flex gap-2 pt-1">
+        <button type="submit" class="flex-1 bg-primary text-white text-sm py-2 rounded hover:bg-primary-dark">Save</button>
+        <button type="button" onclick="closeEditModal()"
+                class="flex-1 border border-gray-300 text-sm py-2 rounded hover:bg-gray-50">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<main class="flex-1 flex flex-col overflow-hidden">
+
+  <!-- Chat header -->
+  <div class="bg-white border-b border-gray-200 px-5 py-3 flex items-center gap-3 flex-shrink-0">
+    <div class="w-8 h-8 rounded-full bg-primary-light flex items-center justify-center text-primary font-bold text-sm">
+      {{ active_conv.name[0].upper() }}
+    </div>
+    <div>
+      <div class="font-medium text-sm text-gray-800">{{ active_conv.name }}</div>
+      <div class="text-xs text-gray-400">
+        {{ conv_bot_ids|length }} bot{% if conv_bot_ids|length != 1 %}s{% endif %} active
+      </div>
+    </div>
+  </div>
+
+  <!-- Messages area -->
+  <div id="messages-container"
+       class="flex-1 overflow-y-auto px-5 py-4 space-y-3"
+       hx-get="/messages/{{ active_conv.id }}"
+       hx-trigger="every 2s"
+       hx-target="#messages-container"
+       hx-swap="innerHTML">
+    {% include "partials/messages.html" %}
+  </div>
+
+  <!-- Input area -->
+  <div class="bg-white border-t border-gray-200 px-5 py-3 flex-shrink-0">
+    <form id="message-form" hx-post="/message"
+          hx-target="#messages-container"
+          hx-swap="innerHTML"
+          class="flex gap-2 items-end">
+      <input type="hidden" name="conv_id" value="{{ active_conv.id }}" />
+      <textarea name="content"
+                id="message-input"
+                rows="1"
+                placeholder="Type a message… RouterBot will pick the right bot"
+                class="flex-1 border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-primary resize-none"
+                onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();this.closest('form').requestSubmit();}"></textarea>
+      <button id="send-btn" class="bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors">
+        Send
+      </button>
+      <button id="stop-btn" type="button"
+              onclick="window.location.reload()"
+              class="hidden bg-red-500 hover:bg-red-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors">
+        Stop
+      </button>
+    </form>
+    <div id="typing-indicator" class="hidden text-xs text-gray-400 mt-1.5 ml-1 italic">Bot is thinking…</div>
+  </div>
+
+</main>
+
+<script>
+  const messageForm = document.getElementById('message-form');
+  const messageInput = document.getElementById('message-input');
+  const typingIndicator = document.getElementById('typing-indicator');
+  const sendBtn = document.getElementById('send-btn');
+  const stopBtn = document.getElementById('stop-btn');
+
+  messageForm.addEventListener('htmx:beforeRequest', function () {
+    messageInput.value = '';
+    messageInput.disabled = true;
+    messageInput.placeholder = 'Bot is thinking…';
+    sendBtn.classList.add('hidden');
+    stopBtn.classList.remove('hidden');
+    typingIndicator.classList.remove('hidden');
+  });
+
+  messageForm.addEventListener('htmx:afterRequest', function () {
+    messageInput.disabled = false;
+    messageInput.placeholder = 'Type a message… RouterBot will pick the right bot';
+    sendBtn.classList.remove('hidden');
+    stopBtn.classList.add('hidden');
+    typingIndicator.classList.add('hidden');
+    messageInput.focus();
+  });
+
+
+  function openEditModal(id, name, role, prompt, model, isDefault, showPrompt = false) {
+    const show = v => v.style.display = '';
+    const hide = v => v.style.display = 'none';
+
+    document.getElementById('edit-modal-title').textContent = showPrompt ? 'Edit Bot' : 'Change Model';
+    showPrompt ? show(document.getElementById('edit-name-wrapper'))   : hide(document.getElementById('edit-name-wrapper'));
+    showPrompt ? show(document.getElementById('edit-role-wrapper'))   : hide(document.getElementById('edit-role-wrapper'));
+    showPrompt ? show(document.getElementById('edit-prompt-wrapper')) : hide(document.getElementById('edit-prompt-wrapper'));
+
+    const form = document.getElementById('edit-bot-form');
+    form.action = `/bots/${id}`;
+    document.getElementById('edit-name').value = name;
+    document.getElementById('edit-name').disabled = isDefault;
+    document.getElementById('edit-role').value = role;
+    document.getElementById('edit-prompt').value = prompt;
+    document.getElementById('edit-model').value = model;
+
+    fetch('/ollama/models')
+      .then(r => r.json())
+      .then(models => {
+        const sel = document.getElementById('edit-model');
+        sel.innerHTML = '';
+        (models.length ? models : ['tinyllama']).forEach(m => {
+          const opt = document.createElement('option');
+          opt.value = m; opt.textContent = m;
+          if (m === model) opt.selected = true;
+          sel.appendChild(opt);
+        });
+      }).catch(() => {});
+
+    document.getElementById('edit-modal').classList.remove('hidden');
+  }
+
+  function closeEditModal() {
+    document.getElementById('edit-modal').classList.add('hidden');
+  }
+
+  // Populate create-bot model dropdown on panel open
+  document.querySelector('[onclick*="create-bot-panel"]').addEventListener('click', () => {
+    fetch('/ollama/models')
+      .then(r => r.json())
+      .then(models => {
+        const sel = document.getElementById('create-model-select');
+        sel.innerHTML = '';
+        (models.length ? models : ['tinyllama']).forEach(m => {
+          const opt = document.createElement('option');
+          opt.value = m; opt.textContent = m;
+          sel.appendChild(opt);
+        });
+      }).catch(() => {});
+  });
+
+  // Auto-scroll messages to bottom
+  const msgContainer = document.getElementById('messages-container');
+
+  function scrollToBottom(force = false) {
+    if (!msgContainer) return;
+    const distanceFromBottom = msgContainer.scrollHeight - msgContainer.scrollTop - msgContainer.clientHeight;
+    if (force || distanceFromBottom < 120) {
+      msgContainer.scrollTop = msgContainer.scrollHeight;
+    }
+  }
+
+  // Force scroll on initial load
+  scrollToBottom(true);
+
+  // On polling swap — only scroll if user is already near the bottom
+  document.body.addEventListener('htmx:afterSwap', e => {
+    if (e.detail.target.id === 'messages-container') scrollToBottom();
+  });
+
+  // Force scroll when user sends a message
+  messageForm.addEventListener('htmx:beforeRequest', () => scrollToBottom(true));
+</script>
+{% endblock %}

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GuthrieAI — Chatroom for Bots</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary:      '#1C6B38',
+            'primary-dark': '#14502A',
+            'primary-light': '#E8F5EC',
+            'primary-mid': '#2d8a4e',
+          }
+        }
+      }
+    }
+  </script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body class="bg-gray-50 text-gray-900 h-screen flex flex-col overflow-hidden">
+
+  <!-- Header -->
+  <header class="bg-primary text-white flex items-center px-5 py-3 shadow-md flex-shrink-0">
+    <img src="{{ url_for('static', filename='images/logo.png') }}"
+         alt="GuthrieAI"
+         class="h-9 mr-4"
+         onerror="this.style.display='none'">
+    <span class="text-lg font-semibold tracking-wide">Chatroom for Bots</span>
+  </header>
+
+  <!-- Main layout -->
+  <div class="flex flex-1 overflow-hidden">
+    {% block sidebar %}{% endblock %}
+    {% block content %}{% endblock %}
+  </div>
+
+</body>
+</html>

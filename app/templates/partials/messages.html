@@ -1,0 +1,41 @@
+{% if messages %}
+  {% for msg in messages %}
+    {% if msg.sender_type == 'user' %}
+    <div class="flex justify-end">
+      <div class="max-w-lg">
+        <div class="bg-primary text-white px-4 py-2.5 rounded-2xl rounded-br-sm text-sm leading-relaxed">
+          {{ msg.content }}
+        </div>
+        <div class="text-xs text-gray-400 text-right mt-1">{{ msg.created_at }}</div>
+      </div>
+    </div>
+
+    {% elif msg.sender_type == 'system' %}
+    <div class="flex justify-center">
+      <span class="text-xs text-gray-400 bg-gray-100 px-3 py-1 rounded-full">
+        🔀 {{ msg.content }}
+      </span>
+    </div>
+
+    {% else %}
+    <div class="flex items-start gap-3">
+      <div class="w-8 h-8 rounded-full bg-primary-light flex items-center justify-center text-primary font-bold text-xs flex-shrink-0">
+        {{ msg.sender_name[0] }}
+      </div>
+      <div class="max-w-lg">
+        <div class="text-xs font-semibold text-primary mb-1">{{ msg.sender_name }}</div>
+        <div class="bg-white border border-gray-200 px-4 py-2.5 rounded-2xl rounded-tl-sm text-sm leading-relaxed shadow-sm whitespace-pre-wrap">{{ msg.content }}</div>
+        <div class="text-xs text-gray-400 mt-1">{{ msg.created_at }}</div>
+      </div>
+    </div>
+    {% endif %}
+  {% endfor %}
+{% else %}
+  <div class="flex flex-col items-center justify-center h-full text-center py-16">
+    <div class="w-16 h-16 rounded-full bg-primary-light flex items-center justify-center mb-4">
+      <span class="text-2xl">💬</span>
+    </div>
+    <p class="text-gray-500 text-sm">No messages yet.</p>
+    <p class="text-gray-400 text-xs mt-1">Send a message and RouterBot will pick the right bot for you.</p>
+  </div>
+{% endif %}
