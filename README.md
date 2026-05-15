@@ -159,3 +159,15 @@ python run.py
 | `POST` | `/bots/<id>` | Update a bot (name, role, system prompt, model) |
 | `POST` | `/bots/<id>/delete` | Delete a bot (non-default only) |
 | `GET` | `/ollama/models` | List available Ollama models (JSON) |
+
+---
+
+## What I Would Have Done With More Time
+
+- **Streaming responses** — stream LLM tokens as they arrive using SSE so the bot appears to type in real time, rather than waiting for the full response
+- **Tests** — unit tests for the routing logic (`_keyword_scores`, `route()`), which is the most critical and testable part of the system
+- **Real bot integrations** — EmailBot with Gmail API/SMTP, AccountingBot with a real accounting API; currently they generate text only
+- **WebSockets** — replace 2-second HTMX polling with a WebSocket connection for true real-time updates
+- **Better model quality** — tinyllama (1B params) gives weak responses for complex tasks; with more time I'd evaluate llama3.2 or integrate a cloud model option for better accuracy
+- **Rate limiting** — prevent concurrent LLM calls from queuing up under rapid sends
+- **Multi-user support** — authentication and per-user conversation isolation; currently single-user by design
