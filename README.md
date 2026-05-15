@@ -32,7 +32,7 @@ No API keys. Everything runs locally via [Ollama](https://ollama.com).
 ## Quick Start
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/chatroomforbots.git
+git clone https://github.com/Swetha-Kambham/chatroomforbots.git
 cd chatroomforbots
 cp .env.example .env
 docker compose up --build
