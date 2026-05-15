@@ -1,0 +1,44 @@
+services:
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: guthrieai_ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  ollama-init:
+    image: ollama/ollama:latest
+    container_name: guthrieai_ollama_init
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+    entrypoint: ["/bin/sh", "-c", "ollama pull tinyllama && ollama pull phi3:mini"]
+    restart: "no"
+
+  web:
+    build: .
+    container_name: guthrieai_web
+    ports:
+      - "5001:5000"
+    depends_on:
+      ollama:
+        condition: service_healthy
+    env_file:
+      - .env
+    volumes:
+      - ./instance:/app/instance
+      - ./app:/app/app
+    restart: unless-stopped
+
+volumes:
+  ollama_data:

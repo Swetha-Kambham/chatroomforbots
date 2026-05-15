@@ -1,0 +1,18 @@
+.env
+instance/
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+.DS_Store
+*.db
+
+# Internal docs — not for repo
+PLAN.md
+CHALLENGES.md
+APPROACH.md
+ARCHITECTURE_NOTES.md
+ROUTING_OPTIONS.md
+REVIEW.md
