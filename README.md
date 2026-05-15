@@ -144,9 +144,18 @@ python run.py
 
 ---
 
-## Docs
+## API Endpoints
 
-- [PLAN.md](PLAN.md) — architecture, schema, API routes
-- [APPROACH.md](APPROACH.md) — design decisions and why things changed
-- [CHALLENGES.md](CHALLENGES.md) — problems encountered and how they were resolved
-- [REVIEW.md](REVIEW.md) — security and architecture review
+| Method | Route | Description |
+|---|---|---|
+| `GET` | `/` | Main chatroom page |
+| `POST` | `/message` | Send a user message — triggers routing and bot response |
+| `GET` | `/messages/<conv_id>` | Fetch messages for a conversation (HTMX polls every 2s) |
+| `POST` | `/conversations` | Create a new conversation |
+| `DELETE` | `/conversations/<id>` | Delete a conversation |
+| `POST` | `/conversations/<id>/bots` | Add a bot to a conversation |
+| `DELETE` | `/conversations/<id>/bots/<bot_id>` | Remove a bot from a conversation |
+| `POST` | `/bots` | Create a custom bot |
+| `POST` | `/bots/<id>` | Update a bot (name, role, system prompt, model) |
+| `POST` | `/bots/<id>/delete` | Delete a bot (non-default only) |
+| `GET` | `/ollama/models` | List available Ollama models (JSON) |
